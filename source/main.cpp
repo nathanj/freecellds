@@ -2,9 +2,9 @@
 #include <vector>
 #include <cstdlib>
 
+#include <stdio.h>
 
 #include <nds.h>
-#include <stdio.h>
 
 #include "background.h"
 #include "tiles.h"
@@ -100,6 +100,14 @@ public:
 	{
 		spriteEntry[0].priority = priority;
 		spriteEntry[1].priority = priority;
+	}
+
+	inline void Disable()
+	{
+		spriteEntry[0].attribute[0] &= ~ATTR0_ROTSCALE_DOUBLE;
+		spriteEntry[0].attribute[0] |= ATTR0_DISABLED;
+		spriteEntry[1].attribute[0] &= ~ATTR0_ROTSCALE_DOUBLE;
+		spriteEntry[1].attribute[0] |= ATTR0_DISABLED;
 	}
 };
 
@@ -205,10 +213,21 @@ public:
 		{
 			if (freecells[i] != NULL)
 			{
+				g_FreeSpriteList[15+i].attribute[0] &= ~ATTR0_DISABLED;
+				g_FreeSpriteList[15+i].attribute[0] |= ATTR0_NORMAL;
+				g_FreeSpriteList[15+i].x = freecells[i]->x();
+				g_FreeSpriteList[15+i].y = freecells[i]->y() + 8;
+			}
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (!finish[i].empty())
+			{
 				g_FreeSpriteList[19+i].attribute[0] &= ~ATTR0_DISABLED;
 				g_FreeSpriteList[19+i].attribute[0] |= ATTR0_NORMAL;
-				g_FreeSpriteList[19+i].x = freecells[i]->x();
-				g_FreeSpriteList[19+i].y = freecells[i]->y() + 8;
+				g_FreeSpriteList[19+i].x = finish[i][finish[i].size()-1]->x();
+				g_FreeSpriteList[19+i].y = finish[i][finish[i].size()-1]->y() + 8;
 			}
 		}
 
@@ -259,6 +278,16 @@ public:
 			if (freecells[i] != NULL)
 				freecells[i]->set_pos(i*32 + 8, 12);
 		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			for (unsigned int j = 0;
+					!finish[i].empty() && j < finish[i].size() - 1; j++)
+				finish[i][j]->Disable();
+
+			for (unsigned int j = 0; j < finish[i].size(); j++)
+				finish[i][j]->set_pos(4*32 + i*32 + 8, 12);
+		}
 	}
 
 	/// Returns true if card1 can be moved under card2.
@@ -266,6 +295,13 @@ public:
 	{
 		return (card1->color() != card2->color() &&
 				card1->value() == card2->value() - 1);
+	}
+
+	/// Returns true if card1 can be moved over card2 on the finished stacks.
+	bool IsCardOverCardFinish(const Card *card1, const Card *card2)
+	{
+		return (card1->suit() == card2->suit() &&
+				card1->value() == card2->value() + 1);
 	}
 
 	/// Returns true if the card in position n of stack st can be moved.
@@ -392,16 +428,42 @@ public:
 					RevertMove();
 				moving.clear();
 			}
+			// Handle moving to the finished stacks.
 			else
 			{
-				RevertMove();
+				selx -= 4;
+				if (moving.size() != 1)
+				{
+					RevertMove();
+				}
+				else
+				{
+					if (finish[selx].empty() && moving[0]->value() == ACE)
+					{
+						moving[0]->SetPriority(3);
+						finish[selx].push_back(moving[0]);
+						moving.clear();
+					}
+					else if (!finish[selx].empty() &&
+							IsCardOverCardFinish(moving[0], finish[selx][0]))
+					{
+						moving[0]->SetPriority(3);
+						finish[selx].push_back(moving[0]);
+						moving.clear();
+					}
+					else
+					{
+						RevertMove();
+					}
+				}
 			}
 		}
 		else
 		{
 			// Handle moving to stack.
 
-			if (!IsCardUnderCard(moving[0], stack[selx][stack[selx].size()-1]))
+			if (!stack[selx].empty() &&
+					!IsCardUnderCard(moving[0], stack[selx][stack[selx].size()-1]))
 			{
 				RevertMove();
 			}
