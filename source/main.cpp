@@ -11,6 +11,19 @@
 
 #if 1
 
+// Windows rand() function. Used to get the same deals as Windows Freecell.
+long holdrand;
+void win_srand (unsigned int seed)
+{
+	holdrand = (long)seed;
+}
+int win_rand (void)
+{
+	return(((holdrand = holdrand * 214013L + 2531011L) >> 16) & 0x7fff);
+}
+
+
+
 SpriteEntry *g_FreeSpriteList;
 
 struct TouchHelper {
@@ -20,7 +33,7 @@ struct TouchHelper {
 };
 
 enum Color { BLACK, RED };
-enum Suit { SPADES, CLUBS, HEARTS, DIAMONDS };
+enum Suit { CLUBS, DIAMONDS, HEARTS, SPADES };
 enum Value { ACE = 1, DEUCE, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE,
 	TEN, JACK, QUEEN, KING };
 
@@ -151,10 +164,11 @@ public:
 		for (int i = 0; i < 52; i++)
 			cards[i].Initialize(i, 0, 0, &spriteEntry[i*2]);
 
-		srand(1);
 		for (int i = 0; i < 52; i++)
 			shuffled[i] = &cards[i];
 
+		win_srand(11982);
+		/*
 		int n = 52;
 		while (n > 1)
 		{
@@ -164,14 +178,45 @@ public:
 			shuffled[n] = shuffled[k];
 			shuffled[k] = tmp;
 		}
+		*/
+		int wLeft = 52;
+		for (int i = 0; i < 52; i++)
+		{
+			int j = win_rand();
+			printf("%d\n", j);
+			j %= wLeft;
+			stack[i%8].push_back(shuffled[j]);
+			shuffled[j] = shuffled[--wLeft];
+		}
 
+#if 0
+		/* shuffle cards */
+
+		for (i = 0; i < 52; i++)      // put unique card in each deck loc.
+			deck[i] = i;
+
+		srand(gamenumber);            // gamenumber is seed for rand()
+		for (i = 0; i < 52; i++)
+		{
+			j = rand() % wLeft;
+			card[(i%8)+1][i/8] = deck[j];
+			deck[j] = deck[--wLeft];
+		}
+#endif
+
+
+		/*
 		for (int i = 0; i < 52; i++)
 			stack[i%8].push_back(shuffled[i]);
+			*/
 
-		for (int i = 0; i < 8; i++)
-			printf("init size(%d) == %u\n", i, stack[i].size());
+		//for (int i = 0; i < 8; i++)
+		//	printf("init size(%d) == %u\n", i, stack[i].size());
 
 		printf("addr of stack[0] = %p\n", &stack[0]);
+
+		SetAllCardPos();
+		DrawBottomOfCards();
 	}
 
 	void DrawBottomOfCards()
