@@ -11,7 +11,7 @@
 #include "background2.h"
 #include "tiles.h"
 
-//#define DEBUG
+#define DEBUG
 
 // Windows rand() function. Used to get the same deals as Windows Freecell.
 long holdrand;
@@ -25,6 +25,8 @@ int win_rand (void)
 }
 
 
+SpriteEntry spriteEntry[128];
+SpriteRotation *spriteRotation = (SpriteRotation*)spriteEntry;
 
 SpriteEntry *g_FreeSpriteList;
 
@@ -46,52 +48,28 @@ enum Value { ACE = 1, DEUCE, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE,
 class Card {
 public:
 	int card;
-	SpriteEntry *spriteEntry;
 
 	Card()
 	{
 	}
 
-	void Initialize(int card, int x, int y, SpriteEntry *entry)
+	void Initialize(int card, int x, int y)
 	{
 		this->card = card;
-
-		this->spriteEntry = entry;
-
-		int basesprite = 10;
-		if (COLOR(card) == RED)
-			basesprite = 36;
-
-		spriteEntry[0].attribute[0] = ATTR0_COLOR_256 | ATTR0_NORMAL | ATTR0_SQUARE;
-		spriteEntry[0].attribute[1] = ATTR1_SIZE_8;
-		spriteEntry[0].attribute[2] = ATTR2_PRIORITY(3) | (basesprite + 2*VALUE(card));
-		spriteEntry[0].x = x;
-		spriteEntry[0].y = y;
-
-		spriteEntry[1].attribute[0] = ATTR0_COLOR_256 | ATTR0_NORMAL | ATTR0_SQUARE;
-		spriteEntry[1].attribute[1] = ATTR1_SIZE_8;
-		spriteEntry[1].attribute[2] = ATTR2_PRIORITY(3) | (4 + 2*SUIT(card));
-		spriteEntry[1].x = x + 8;
-		spriteEntry[1].y = y;
 	}
 
 	void set_pos(int x, int y)
 	{
-		spriteEntry[0].x = x;
-		spriteEntry[0].y = y;
-
-		spriteEntry[1].x = x + 8;
-		spriteEntry[1].y = y;
 	}
 
 	inline int x() const
 	{
-		return spriteEntry[0].x;
+		return 5;
 	}
 
 	inline int y() const
 	{
-		return spriteEntry[0].y;
+		return 5;
 	}
 
 	inline int color() const
@@ -111,16 +89,11 @@ public:
 
 	inline void SetPriority(int priority)
 	{
-		spriteEntry[0].priority = priority;
-		spriteEntry[1].priority = priority;
+
 	}
 
 	inline void Disable()
 	{
-		spriteEntry[0].attribute[0] &= ~ATTR0_ROTSCALE_DOUBLE;
-		spriteEntry[0].attribute[0] |= ATTR0_DISABLED;
-		spriteEntry[1].attribute[0] &= ~ATTR0_ROTSCALE_DOUBLE;
-		spriteEntry[1].attribute[0] |= ATTR0_DISABLED;
 	}
 };
 
@@ -146,7 +119,7 @@ public:
 	{
 	}
 
-	void Initialize(SpriteEntry *spriteEntry)
+	void Initialize()
 	{
 		movingx = movingy = 0;
 
@@ -162,7 +135,7 @@ public:
 			freecells[i] = NULL;
 
 		for (int i = 0; i < 52; i++)
-			cards[i].Initialize(i, 0, 0, &spriteEntry[i*2]);
+			cards[i].Initialize(i, 0, 0);
 
 		Deal();
 
@@ -179,7 +152,7 @@ public:
 			stack[i].clear();
 		printf("%ld\n", time(NULL));
 
-		win_srand(164);
+		win_srand(11982);
 		int wLeft = 52;
 		for (int i = 0; i < 52; i++)
 		{
@@ -191,6 +164,8 @@ public:
 
 	void DrawBottomOfCards()
 	{
+		return;
+
 		for (int j = 0; j < 24; j++)
 		{
 			// Clear normal/disabled flags
@@ -268,14 +243,47 @@ public:
 	/// are in.
 	void SetAllCardPos()
 	{
-		for (int i = 0; i < 8; i++)
+		int pos = 0;
+
+		for (int j = moving.size() - 1; j >= 0; j--)
 		{
-			for (unsigned int j = 0; j < stack[i].size(); j++)
-				stack[i][j]->set_pos(i*32 + 8, j*8 + 48);
+			int suit = moving[j]->suit();
+			int value = moving[j]->value() - 1;
+			int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
+
+			spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
+			spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
+			spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
+			spriteEntry[pos].x = movingx;
+			spriteEntry[pos].y = movingy + j*11;
+			pos++;
 		}
 
-		for (unsigned int j = 0; j < moving.size(); j++)
-			moving[j]->set_pos(movingx, movingy + j*8);
+		for (int i = 0; i < 8; i++)
+		{
+			for (int j = stack[i].size() - 1; j >= 0; j--)
+			{
+				int suit = stack[i][j]->suit();
+				int value = stack[i][j]->value() - 1;
+				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
+				//if (j == 0)
+				//	printf("s = %d  v = %2d  i = %d\n", suit, value, index);
+
+				//if (index == 0)
+				//	printf("s=%d v=%2d i=%d i=%d j=%d\n", suit, value, index, i, j);
+
+				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
+				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
+				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
+				spriteEntry[pos].x = i*32;
+				spriteEntry[pos].y = j*11 + 48;
+
+				pos++;
+			}
+			//stack[i][j]->set_pos(i*32 + 8, j*8 + 48);
+		}
+
+		/*
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -292,6 +300,7 @@ public:
 			for (unsigned int j = 0; j < finish[i].size(); j++)
 				finish[i][j]->set_pos(4*32 + i*32 + 8, 12);
 		}
+		*/
 	}
 
 	/// Returns true if card1 can be moved under card2.
@@ -336,8 +345,8 @@ public:
 		int px = touch.touch.px;
 		int py = touch.touch.py;
 
-		unsigned int selx = (px - 8) / 32;
-		unsigned int sely = (py - 48) / 8;
+		unsigned int selx = px / 32;
+		unsigned int sely = (py - 48) / 11;
 
 		if (selx > 7)
 			selx = 7;
@@ -510,7 +519,7 @@ inline void dmaFlushCopy(void *src, void *dst, size_t size)
 }
 
 
-void updateOAM(SpriteEntry *spriteEntry) {
+void updateOAM() {
     //DC_FlushAll();
 	memcpy(OAM, spriteEntry, 128*sizeof(SpriteEntry));
     //dmaCopyHalfWords(3, spriteEntry, OAM, 128 * sizeof(SpriteEntry));
@@ -518,8 +527,6 @@ void updateOAM(SpriteEntry *spriteEntry) {
 
 int main(void) {
 	int i;
-	SpriteEntry spriteEntry[128];
-	SpriteRotation *spriteRotation = (SpriteRotation*)spriteEntry;
 	TouchHelper touch;
 
 	powerOn(POWER_ALL_2D);
@@ -531,17 +538,15 @@ int main(void) {
 
 	// Set the video ram banks.
     vramSetMainBanks(VRAM_A_MAIN_BG_0x06000000,
-                     VRAM_B_MAIN_BG_0x06020000,
+                     VRAM_B_MAIN_SPRITE_0x06400000,
                      VRAM_C_SUB_BG_0x06200000,
                      VRAM_D_LCD);
-	vramSetBankE(VRAM_E_MAIN_SPRITE);
-
  
 	// Set the graphic modes.
     videoSetMode(MODE_5_2D |
                  DISPLAY_BG3_ACTIVE |
                  DISPLAY_SPR_ACTIVE |
-                 DISPLAY_SPR_1D);
+                 DISPLAY_SPR_2D);
 #ifndef DEBUG
     videoSetModeSub(MODE_5_2D | DISPLAY_BG3_ACTIVE);
 #endif
@@ -567,15 +572,25 @@ int main(void) {
 		spriteRotation[i].vdy = 256;
 	}
 
+	/*
 	g_FreeSpriteList = &spriteEntry[104];
 	for (i = 104; i < 128; i++)
 	{
-		spriteEntry[i].attribute[0] = ATTR0_DISABLED | ATTR0_COLOR_256 | ATTR0_WIDE;
+		spriteEntry[i].attribute[0] = ATTR0_DISABLED | ATTR0_COLOR_16 | ATTR0_WIDE;
 		spriteEntry[i].attribute[1] = ATTR1_SIZE_8;
 		spriteEntry[i].attribute[2] = ATTR2_PRIORITY(3);
 		spriteEntry[i].x = 0;
 		spriteEntry[i].y = 0;
 	}
+	*/
+
+	/*
+	spriteEntry[10].attribute[0] = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE;
+	spriteEntry[10].attribute[1] = ATTR1_SIZE_32;
+	spriteEntry[10].attribute[2] = ATTR2_PRIORITY(3) | 128;
+	spriteEntry[10].x = 40;
+	spriteEntry[10].y = 40;
+	*/
 
 	// Copy the graphics to video ram.
 	DC_FlushAll();
@@ -588,7 +603,7 @@ int main(void) {
 
 	// Start the game.
 	FreeCellGame game;
-	game.Initialize(spriteEntry);
+	game.Initialize();
 
 	while (1) {
 		scanKeys();
@@ -602,7 +617,7 @@ int main(void) {
 		game.Update(touch);
 
 		swiWaitForVBlank();
-		updateOAM(spriteEntry);
+		updateOAM();
 	}
  
 	return 0;
