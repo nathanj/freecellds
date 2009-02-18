@@ -3,19 +3,21 @@
 #include <cstdlib>
 
 #include <stdio.h>
+#include <string.h>
 
 #include <nds.h>
 
 #include "background.h"
+#include "background2.h"
 #include "tiles.h"
 
-#if 1
+//#define DEBUG
 
 // Windows rand() function. Used to get the same deals as Windows Freecell.
 long holdrand;
-void win_srand (unsigned int seed)
+void win_srand (long seed)
 {
-	holdrand = (long)seed;
+	holdrand = seed;
 }
 int win_rand (void)
 {
@@ -80,8 +82,6 @@ public:
 
 		spriteEntry[1].x = x + 8;
 		spriteEntry[1].y = y;
-
-		//printf("pos = (%d, %d)\n", spriteEntry[0].x, spriteEntry[0].y);
 	}
 
 	inline int x() const
@@ -164,64 +164,33 @@ public:
 		for (int i = 0; i < 52; i++)
 			cards[i].Initialize(i, 0, 0, &spriteEntry[i*2]);
 
-		for (int i = 0; i < 52; i++)
-			shuffled[i] = &cards[i];
-
-		win_srand(11982);
-		/*
-		int n = 52;
-		while (n > 1)
-		{
-			int k = rand()%n;
-			n--;
-			Card *tmp = shuffled[n];
-			shuffled[n] = shuffled[k];
-			shuffled[k] = tmp;
-		}
-		*/
-		int wLeft = 52;
-		for (int i = 0; i < 52; i++)
-		{
-			int j = win_rand();
-			printf("%d\n", j);
-			j %= wLeft;
-			stack[i%8].push_back(shuffled[j]);
-			shuffled[j] = shuffled[--wLeft];
-		}
-
-#if 0
-		/* shuffle cards */
-
-		for (i = 0; i < 52; i++)      // put unique card in each deck loc.
-			deck[i] = i;
-
-		srand(gamenumber);            // gamenumber is seed for rand()
-		for (i = 0; i < 52; i++)
-		{
-			j = rand() % wLeft;
-			card[(i%8)+1][i/8] = deck[j];
-			deck[j] = deck[--wLeft];
-		}
-#endif
-
-
-		/*
-		for (int i = 0; i < 52; i++)
-			stack[i%8].push_back(shuffled[i]);
-			*/
-
-		//for (int i = 0; i < 8; i++)
-		//	printf("init size(%d) == %u\n", i, stack[i].size());
-
-		printf("addr of stack[0] = %p\n", &stack[0]);
+		Deal();
 
 		SetAllCardPos();
 		DrawBottomOfCards();
 	}
 
+	void Deal()
+	{
+		for (int i = 0; i < 52; i++)
+			shuffled[i] = &cards[i];
+
+		for (int i = 0; i < 8; i++)
+			stack[i].clear();
+		printf("%ld\n", time(NULL));
+
+		win_srand(164);
+		int wLeft = 52;
+		for (int i = 0; i < 52; i++)
+		{
+			int j = win_rand() % wLeft;
+			stack[i%8].push_back(shuffled[j]);
+			shuffled[j] = shuffled[--wLeft];
+		}
+	}
+
 	void DrawBottomOfCards()
 	{
-		//printf("addr free = %p\n", g_FreeSpriteList);
 		for (int j = 0; j < 24; j++)
 		{
 			// Clear normal/disabled flags
@@ -301,19 +270,9 @@ public:
 	{
 		for (int i = 0; i < 8; i++)
 		{
-			//unsigned int size = stack[i].size();
-			//printf("size(%d) == %u %d\n", i, size, size);
-
-			//if (size > 5)
-			//	size = 4;
-
 			for (unsigned int j = 0; j < stack[i].size(); j++)
-			{
-				//printf("size(%d) == %u, j = %u\n", i, size, j);
 				stack[i][j]->set_pos(i*32 + 8, j*8 + 48);
-			}
 		}
-		//printf("moving.size = %u\n", moving.size());
 
 		for (unsigned int j = 0; j < moving.size(); j++)
 			moving[j]->set_pos(movingx, movingy + j*8);
@@ -364,7 +323,6 @@ public:
 
 		while (n < size - 1)
 		{
-			//printf("in here, n = %d\n", n);
 			if (!IsCardUnderCard(stack[st][n+1], stack[st][n]))
 				return false;
 			n++;
@@ -451,7 +409,6 @@ public:
 		int py = touch.prevy;
 
 		unsigned int selx = (px - 8) / 32;
-		printf("px = %d, selx = %u\n", px, selx);
 
 		if (selx > 7)
 			selx = 7;
@@ -490,7 +447,7 @@ public:
 						moving.clear();
 					}
 					else if (!finish[selx].empty() &&
-							IsCardOverCardFinish(moving[0], finish[selx][0]))
+							IsCardOverCardFinish(moving[0], finish[selx][finish[selx].size()-1]))
 					{
 						moving[0]->SetPriority(3);
 						finish[selx].push_back(moving[0]);
@@ -506,7 +463,6 @@ public:
 		else
 		{
 			// Handle moving to stack.
-
 			if (!stack[selx].empty() &&
 					!IsCardUnderCard(moving[0], stack[selx][stack[selx].size()-1]))
 			{
@@ -514,8 +470,6 @@ public:
 			}
 			else
 			{
-				printf("px = %d, selx = %u\n", px, selx);
-
 				for (std::vector<Card*>::iterator it = moving.begin();
 						it != moving.end(); ++it)
 				{
@@ -550,35 +504,57 @@ public:
 
 inline void dmaFlushCopy(void *src, void *dst, size_t size)
 {
-	DC_FlushRange(src, size);
+	//DC_FlushRange(src, size);
+	DC_FlushAll();
 	dmaCopy(src, dst, size);
+}
+
+
+void updateOAM(SpriteEntry *spriteEntry) {
+    //DC_FlushAll();
+	memcpy(OAM, spriteEntry, 128*sizeof(SpriteEntry));
+    //dmaCopyHalfWords(3, spriteEntry, OAM, 128 * sizeof(SpriteEntry));
 }
 
 int main(void) {
 	int i;
-
-	irqEnable(IRQ_VBLANK);
-
-	lcdSwap();
-
-	consoleDemoInit();
-
-	//set video mode and map vram to the background
-	videoSetMode(MODE_5_2D | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D /*| DISPLAY_BG0_ACTIVE*/ | DISPLAY_BG3_ACTIVE);
-	vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
-	//vramSetBankB(VRAM_B_MAIN_BG_0x06020000);
-	vramSetBankE(VRAM_E_MAIN_SPRITE);
- 
-	//tell the DS where we are putting everything and set 256 color mode and
-	//that we are using a 32 by 32 tile map.
-	//REG_BG0CNT = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY_0;
-	//REG_BG3CNT = BG_BMP16_256x256 | BG_COLOR_16 | BG_PRIORITY_0;
-	bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
-	REG_BG3CNT |= BG_PRIORITY_3;
-
 	SpriteEntry spriteEntry[128];
 	SpriteRotation *spriteRotation = (SpriteRotation*)spriteEntry;
+	TouchHelper touch;
 
+	powerOn(POWER_ALL_2D);
+	lcdMainOnBottom();
+
+#ifdef DEBUG
+	consoleDemoInit();
+#endif
+
+	// Set the video ram banks.
+    vramSetMainBanks(VRAM_A_MAIN_BG_0x06000000,
+                     VRAM_B_MAIN_BG_0x06020000,
+                     VRAM_C_SUB_BG_0x06200000,
+                     VRAM_D_LCD);
+	vramSetBankE(VRAM_E_MAIN_SPRITE);
+
+ 
+	// Set the graphic modes.
+    videoSetMode(MODE_5_2D |
+                 DISPLAY_BG3_ACTIVE |
+                 DISPLAY_SPR_ACTIVE |
+                 DISPLAY_SPR_1D);
+#ifndef DEBUG
+    videoSetModeSub(MODE_5_2D | DISPLAY_BG3_ACTIVE);
+#endif
+
+	// Initialize the background.
+	bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+	REG_BG3CNT |= BG_PRIORITY_3;
+#ifndef DEBUG
+	bgInitSub(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+	REG_BG3CNT_SUB |= BG_PRIORITY_3;
+#endif
+
+	// Initialize the sprites to all be off.
 	for (i = 0; i < 128; i++) {
 		spriteEntry[i].attribute[0] = ATTR0_DISABLED;
 		spriteEntry[i].attribute[1] = 0;
@@ -601,21 +577,20 @@ int main(void) {
 		spriteEntry[i].y = 0;
 	}
 
-	FreeCellGame game;
-	game.Initialize(spriteEntry);
-
+	// Copy the graphics to video ram.
 	DC_FlushAll();
 	dmaCopy(tilesPal, SPRITE_PALETTE, sizeof(tilesPal));
 	dmaCopy(tilesTiles, SPRITE_GFX, sizeof(tilesTiles));
-
 	decompress(backgroundBitmap, BG_GFX, LZ77Vram);
+#ifndef DEBUG
+	decompress(background2Bitmap, BG_GFX_SUB, LZ77Vram);
+#endif
 
-	TouchHelper touch;
+	// Start the game.
+	FreeCellGame game;
+	game.Initialize(spriteEntry);
 
 	while (1) {
-
-		swiWaitForVBlank();
-
 		scanKeys();
 		touch.prevx = touch.touch.px;
 		touch.prevy = touch.touch.py;
@@ -623,19 +598,13 @@ int main(void) {
 		touch.held = keysHeld() & KEY_TOUCH;
 		touch.down = keysDown() & KEY_TOUCH;
 		touch.up   = keysUp() & KEY_TOUCH;
-		//consoleClear();
-		//iprintf("(%d, %d)\n", touch.touch.px, touch.touch.py);
-		//iprintf("held = %s\n", touch.held ? "on" : "off");
-		//iprintf("down = %s\n", touch.down ? "on" : "off");
-		//iprintf("up = %s\n", touch.up ? "on" : "off");
 
 		game.Update(touch);
 
-		dmaFlushCopy(spriteEntry, OAM, 128*sizeof(SpriteEntry));
+		swiWaitForVBlank();
+		updateOAM(spriteEntry);
 	}
  
 	return 0;
 }
-
-#endif
 
