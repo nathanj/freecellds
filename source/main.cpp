@@ -176,13 +176,13 @@ public:
 		for (int i = 0; i < 4; i++)
 		{
 			if (freecells[i] != NULL)
-				DrawCard(freecells[i], pos++, i*32, 12);
+				DrawCard(freecells[i], pos++, i*32, 5);
 		}
 
 		for (int i = 0; i < 4; i++)
 		{
 			if (!finish[i].empty())
-				DrawCard(finish[i][finish[i].size()-1], pos++, (4+i)*32, 12);
+				DrawCard(finish[i][finish[i].size()-1], pos++, (4+i)*32, 5);
 		}
 
 		while (pos < 128)
