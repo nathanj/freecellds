@@ -51,7 +51,7 @@ public:
 	{
 	}
 
-	void Initialize(int card, int x, int y)
+	void Initialize(int card)
 	{
 		this->card = card;
 	}
@@ -106,27 +106,25 @@ public:
 
 		moving.reserve(13);
 
-		for (int i = 0; i < 4; i++)
-			freecells[i] = NULL;
-
 		for (int i = 0; i < 52; i++)
-			cards[i].Initialize(i, 0, 0);
+			cards[i].Initialize(i);
 
-		Deal();
+		Deal(time(NULL));
 
 		DrawCards();
 	}
 
-	void Deal()
+	/// Deal the cards with the specified game number.
+	void Deal(long seed)
 	{
 		for (int i = 0; i < 52; i++)
 			shuffled[i] = &cards[i];
 
 		for (int i = 0; i < 8; i++)
 			stack[i].clear();
-		printf("%ld\n", time(NULL));
+		printf("game #%ld\n", time(NULL)&0x7fff);
 
-		win_srand(164);
+		win_srand(seed);
 		int wLeft = 52;
 		for (int i = 0; i < 52; i++)
 		{
@@ -134,6 +132,12 @@ public:
 			stack[i%8].push_back(shuffled[j]);
 			shuffled[j] = shuffled[--wLeft];
 		}
+
+		for (int i = 0; i < 4; i++)
+			freecells[i] = NULL;
+
+		for (int i = 0; i < 4; i++)
+			finish[i].clear();
 	}
 
 	/// Moves the bottom n cards from the first stack to the second.
@@ -469,6 +473,9 @@ int main(void) {
 		touch.held = keysHeld() & KEY_TOUCH;
 		touch.down = keysDown() & KEY_TOUCH;
 		touch.up   = keysUp() & KEY_TOUCH;
+
+		if (keysDown() & KEY_START)
+			game.Deal(time(NULL));
 
 		game.Update(touch);
 
