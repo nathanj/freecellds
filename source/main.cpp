@@ -114,7 +114,7 @@ public:
 
 		Deal();
 
-		SetAllCardPos();
+		DrawCards();
 	}
 
 	void Deal()
@@ -145,78 +145,44 @@ public:
 		stack[s1].erase(stack[s1].end() - n, stack[s1].end());
 	}
 
-	/// Sets the x and y position for all cards depending on what stack they
-	/// are in.
-	void SetAllCardPos()
+	/// Draws a single card.
+	void DrawCard(Card *card, int sprite_pos, int x, int y)
+	{
+		int suit = card->suit();
+		int value = card->value() - 1;
+		int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
+
+		spriteEntry[sprite_pos].attribute[0] = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE;
+		spriteEntry[sprite_pos].attribute[1] = ATTR1_SIZE_32;
+		spriteEntry[sprite_pos].attribute[2] = ATTR2_PRIORITY(3) | index;
+		spriteEntry[sprite_pos].x = x;
+		spriteEntry[sprite_pos].y = y;
+	}
+
+	/// Draws all the cards.
+	void DrawCards()
 	{
 		int pos = 0;
 
 		for (int j = moving.size() - 1; j >= 0; j--)
-		{
-			int suit = moving[j]->suit();
-			int value = moving[j]->value() - 1;
-			int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
-
-			spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
-			spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
-			spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
-			spriteEntry[pos].x = movingx - 8;
-			spriteEntry[pos].y = movingy - 4 + j*11;
-			pos++;
-		}
+			DrawCard(moving[j], pos++, movingx - 8, movingy - 4 + j*11);
 
 		for (int i = 0; i < 8; i++)
 		{
 			for (int j = stack[i].size() - 1; j >= 0; j--)
-			{
-				int suit = stack[i][j]->suit();
-				int value = stack[i][j]->value() - 1;
-				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
-
-				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
-				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
-				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
-				spriteEntry[pos].x = i*32;
-				spriteEntry[pos].y = j*11 + 48;
-
-				pos++;
-			}
+				DrawCard(stack[i][j], pos++, i*32, j*11 + 48);
 		}
 
 		for (int i = 0; i < 4; i++)
 		{
 			if (freecells[i] != NULL)
-			{
-				int suit = freecells[i]->suit();
-				int value = freecells[i]->value() - 1;
-				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
-
-				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
-				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
-				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
-				spriteEntry[pos].x = i*32;
-				spriteEntry[pos].y = 12;
-
-				pos++;
-			}
+				DrawCard(freecells[i], pos++, i*32, 12);
 		}
 
 		for (int i = 0; i < 4; i++)
 		{
 			if (!finish[i].empty())
-			{
-				int suit = finish[i][finish[i].size()-1]->suit();
-				int value = finish[i][finish[i].size()-1]->value() - 1;
-				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
-
-				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
-				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
-				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
-				spriteEntry[pos].x = (4+i)*32;
-				spriteEntry[pos].y = 12;
-
-				pos++;
-			}
+				DrawCard(finish[i][finish[i].size()-1], pos++, (4+i)*32, 12);
 		}
 
 		while (pos < 128)
@@ -417,7 +383,7 @@ public:
 	void Update(const TouchHelper &touch)
 	{
 		HandleTouch(touch);
-		SetAllCardPos();
+		DrawCards();
 	}
 };
 
