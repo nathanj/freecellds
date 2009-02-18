@@ -28,8 +28,6 @@ int win_rand (void)
 SpriteEntry spriteEntry[128];
 SpriteRotation *spriteRotation = (SpriteRotation*)spriteEntry;
 
-SpriteEntry *g_FreeSpriteList;
-
 struct TouchHelper {
 	bool held, down, up;
 	touchPosition touch;
@@ -58,20 +56,6 @@ public:
 		this->card = card;
 	}
 
-	void set_pos(int x, int y)
-	{
-	}
-
-	inline int x() const
-	{
-		return 5;
-	}
-
-	inline int y() const
-	{
-		return 5;
-	}
-
 	inline int color() const
 	{
 		return COLOR(card);
@@ -85,15 +69,6 @@ public:
 	inline int value() const
 	{
 		return VALUE(card);
-	}
-
-	inline void SetPriority(int priority)
-	{
-
-	}
-
-	inline void Disable()
-	{
 	}
 };
 
@@ -140,7 +115,6 @@ public:
 		Deal();
 
 		SetAllCardPos();
-		DrawBottomOfCards();
 	}
 
 	void Deal()
@@ -152,81 +126,13 @@ public:
 			stack[i].clear();
 		printf("%ld\n", time(NULL));
 
-		win_srand(11982);
+		win_srand(164);
 		int wLeft = 52;
 		for (int i = 0; i < 52; i++)
 		{
 			int j = win_rand() % wLeft;
 			stack[i%8].push_back(shuffled[j]);
 			shuffled[j] = shuffled[--wLeft];
-		}
-	}
-
-	void DrawBottomOfCards()
-	{
-		return;
-
-		for (int j = 0; j < 24; j++)
-		{
-			// Clear normal/disabled flags
-			g_FreeSpriteList[j].attribute[0] &= ~ATTR0_ROTSCALE_DOUBLE;
-
-			g_FreeSpriteList[j].attribute[0] |= ATTR0_DISABLED;
-		}
-
-		g_FreeSpriteList[0].attribute[0] &= ~ATTR0_DISABLED;
-		g_FreeSpriteList[0].attribute[0] |= ATTR0_NORMAL;
-		g_FreeSpriteList[0].x = stack[0][0]->x();
-		g_FreeSpriteList[0].y = stack[0][0]->y() + 8;
-
-		for (int i = 0; i < 8; i++)
-		{
-			if (stack[i].empty())
-				continue;
-
-			for (int j = 0; j < 24; j++)
-			{
-				if ((g_FreeSpriteList[j].attribute[0] & ATTR0_DISABLED)
-						== ATTR0_DISABLED)
-				{
-					g_FreeSpriteList[j].attribute[0] &= ~ATTR0_DISABLED;
-					g_FreeSpriteList[j].attribute[0] |= ATTR0_NORMAL;
-					g_FreeSpriteList[j].x = stack[i][stack[i].size()-1]->x();
-					g_FreeSpriteList[j].y = stack[i][stack[i].size()-1]->y() + 8;
-					break;
-				}
-			}
-		}
-
-		for (int i = 0; i < 4; i++)
-		{
-			if (freecells[i] != NULL)
-			{
-				g_FreeSpriteList[15+i].attribute[0] &= ~ATTR0_DISABLED;
-				g_FreeSpriteList[15+i].attribute[0] |= ATTR0_NORMAL;
-				g_FreeSpriteList[15+i].x = freecells[i]->x();
-				g_FreeSpriteList[15+i].y = freecells[i]->y() + 8;
-			}
-		}
-
-		for (int i = 0; i < 4; i++)
-		{
-			if (!finish[i].empty())
-			{
-				g_FreeSpriteList[19+i].attribute[0] &= ~ATTR0_DISABLED;
-				g_FreeSpriteList[19+i].attribute[0] |= ATTR0_NORMAL;
-				g_FreeSpriteList[19+i].x = finish[i][finish[i].size()-1]->x();
-				g_FreeSpriteList[19+i].y = finish[i][finish[i].size()-1]->y() + 8;
-			}
-		}
-
-		if (!moving.empty())
-		{
-			g_FreeSpriteList[23].attribute[0] &= ~ATTR0_DISABLED;
-			g_FreeSpriteList[23].attribute[0] |= ATTR0_NORMAL;
-			g_FreeSpriteList[23].priority = 0;
-			g_FreeSpriteList[23].x = moving[moving.size()-1]->x();
-			g_FreeSpriteList[23].y = moving[moving.size()-1]->y() + 8;
 		}
 	}
 
@@ -254,8 +160,8 @@ public:
 			spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
 			spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
 			spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
-			spriteEntry[pos].x = movingx;
-			spriteEntry[pos].y = movingy + j*11;
+			spriteEntry[pos].x = movingx - 8;
+			spriteEntry[pos].y = movingy - 4 + j*11;
 			pos++;
 		}
 
@@ -266,11 +172,6 @@ public:
 				int suit = stack[i][j]->suit();
 				int value = stack[i][j]->value() - 1;
 				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
-				//if (j == 0)
-				//	printf("s = %d  v = %2d  i = %d\n", suit, value, index);
-
-				//if (index == 0)
-				//	printf("s=%d v=%2d i=%d i=%d j=%d\n", suit, value, index, i, j);
 
 				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
 				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
@@ -280,27 +181,46 @@ public:
 
 				pos++;
 			}
-			//stack[i][j]->set_pos(i*32 + 8, j*8 + 48);
 		}
-
-		/*
 
 		for (int i = 0; i < 4; i++)
 		{
 			if (freecells[i] != NULL)
-				freecells[i]->set_pos(i*32 + 8, 12);
+			{
+				int suit = freecells[i]->suit();
+				int value = freecells[i]->value() - 1;
+				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
+
+				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
+				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
+				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
+				spriteEntry[pos].x = i*32;
+				spriteEntry[pos].y = 12;
+
+				pos++;
+			}
 		}
 
 		for (int i = 0; i < 4; i++)
 		{
-			for (unsigned int j = 0;
-					!finish[i].empty() && j < finish[i].size() - 1; j++)
-				finish[i][j]->Disable();
+			if (!finish[i].empty())
+			{
+				int suit = finish[i][finish[i].size()-1]->suit();
+				int value = finish[i][finish[i].size()-1]->value() - 1;
+				int index = (value / 2) * 128 + (value % 2) * 16 + suit * 4;
 
-			for (unsigned int j = 0; j < finish[i].size(); j++)
-				finish[i][j]->set_pos(4*32 + i*32 + 8, 12);
+				spriteEntry[pos].attribute[0] = ATTR0_COLOR_16 | ATTR0_NORMAL | ATTR0_SQUARE;
+				spriteEntry[pos].attribute[1] = ATTR1_SIZE_32;
+				spriteEntry[pos].attribute[2] = ATTR2_PRIORITY(3) | index;
+				spriteEntry[pos].x = (4+i)*32;
+				spriteEntry[pos].y = 12;
+
+				pos++;
+			}
 		}
-		*/
+
+		while (pos < 128)
+			spriteEntry[pos++].attribute[0] = ATTR0_DISABLED;
 	}
 
 	/// Returns true if card1 can be moved under card2.
@@ -362,8 +282,6 @@ public:
 					stack_moving_from = selx + 8;
 					freecells[selx] = NULL;
 
-					moving[0]->SetPriority(0);
-
 					movingx = px;
 					movingy = py;
 				}
@@ -379,7 +297,6 @@ public:
 				for (std::vector<Card*>::iterator it = stack[selx].begin() + sely;
 						it != stack[selx].end(); ++it)
 				{
-					(*it)->SetPriority(0);
 					moving.push_back(*it);
 				}
 				stack[selx].erase(stack[selx].begin() + sely, stack[selx].end());
@@ -399,13 +316,11 @@ public:
 			for (std::vector<Card*>::iterator it = moving.begin();
 					it != moving.end(); ++it)
 			{
-				(*it)->SetPriority(3);
 				stack[stack_moving_from].push_back(*it);
 			}
 		}
 		else
 		{
-			moving[0]->SetPriority(3);
 			freecells[stack_moving_from - 8] = moving[0];
 		}
 
@@ -432,7 +347,6 @@ public:
 			{
 				if (freecells[selx] == NULL && moving.size() == 1)
 				{
-					moving[0]->SetPriority(3);
 					freecells[selx] = moving[0];
 				}
 				else
@@ -451,14 +365,12 @@ public:
 				{
 					if (finish[selx].empty() && moving[0]->value() == ACE)
 					{
-						moving[0]->SetPriority(3);
 						finish[selx].push_back(moving[0]);
 						moving.clear();
 					}
 					else if (!finish[selx].empty() &&
 							IsCardOverCardFinish(moving[0], finish[selx][finish[selx].size()-1]))
 					{
-						moving[0]->SetPriority(3);
 						finish[selx].push_back(moving[0]);
 						moving.clear();
 					}
@@ -482,7 +394,6 @@ public:
 				for (std::vector<Card*>::iterator it = moving.begin();
 						it != moving.end(); ++it)
 				{
-					(*it)->SetPriority(3);
 					stack[selx].push_back(*it);
 				}
 				moving.clear();
@@ -507,7 +418,6 @@ public:
 	{
 		HandleTouch(touch);
 		SetAllCardPos();
-		DrawBottomOfCards();
 	}
 };
 
@@ -571,26 +481,6 @@ int main(void) {
 		spriteRotation[i].vdx = 0;
 		spriteRotation[i].vdy = 256;
 	}
-
-	/*
-	g_FreeSpriteList = &spriteEntry[104];
-	for (i = 104; i < 128; i++)
-	{
-		spriteEntry[i].attribute[0] = ATTR0_DISABLED | ATTR0_COLOR_16 | ATTR0_WIDE;
-		spriteEntry[i].attribute[1] = ATTR1_SIZE_8;
-		spriteEntry[i].attribute[2] = ATTR2_PRIORITY(3);
-		spriteEntry[i].x = 0;
-		spriteEntry[i].y = 0;
-	}
-	*/
-
-	/*
-	spriteEntry[10].attribute[0] = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE;
-	spriteEntry[10].attribute[1] = ATTR1_SIZE_32;
-	spriteEntry[10].attribute[2] = ATTR2_PRIORITY(3) | 128;
-	spriteEntry[10].x = 40;
-	spriteEntry[10].y = 40;
-	*/
 
 	// Copy the graphics to video ram.
 	DC_FlushAll();
