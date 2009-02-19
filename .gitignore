@@ -1,4 +1,5 @@
 build
+dist
 *.arm9
 *.elf
 *.nds

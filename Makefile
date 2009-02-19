@@ -97,7 +97,7 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
  
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
  
-.PHONY: $(BUILD) clean
+.PHONY: $(BUILD) clean dist bin-dist
  
 #---------------------------------------------------------------------------------
 $(BUILD):
@@ -139,3 +139,12 @@ $(OUTPUT).elf	:	$(OFILES)
 #---------------------------------------------------------------------------------------
 endif
 #---------------------------------------------------------------------------------------
+
+dist:
+	mkdir -p dist
+	git archive --prefix=freecellds-`git describe --tag`/ master | gzip -9 > dist/freecellds-`git describe --tag`.tar.gz
+
+bin-dist: freecellds.nds
+	mkdir -p dist
+	zip dist/freecellds-bin-`git describe --tag`.zip freecellds.nds
+
