@@ -11,7 +11,7 @@
 #include "background2.h"
 #include "tiles.h"
 
-#define DEBUG
+//#define DEBUG
 
 // Windows rand() function. Used to get the same deals as Windows Freecell.
 long holdrand;
