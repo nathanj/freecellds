@@ -241,7 +241,7 @@ public:
 		if (selx > 7)
 			selx = 7;
 
-		if (py < 40)
+		if (py < 48)
 		{
 			// Handle selecting from freecells.
 			if (selx < 4)
@@ -259,6 +259,9 @@ public:
 		}
 		else
 		{
+			if (sely > stack[selx].size() - 1)
+				sely = stack[selx].size() - 1;
+
 			if (!CanSelectCard(selx, sely))
 				return;
 
@@ -310,7 +313,7 @@ public:
 		if (moving.empty())
 			return;
 
-		if (py < 40)
+		if (py < 48)
 		{
 			// Handle moving to freecells.
 			if (selx < 4)
