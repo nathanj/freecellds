@@ -10,6 +10,7 @@
 #include "background.h"
 #include "background2.h"
 #include "tiles.h"
+#include "font.h"
 
 //#define DEBUG
 
@@ -27,6 +28,8 @@ int win_rand (void)
 
 SpriteEntry spriteEntry[128];
 SpriteRotation *spriteRotation = (SpriteRotation*)spriteEntry;
+SpriteEntry spriteEntrySub[128];
+SpriteRotation *spriteRotationSub = (SpriteRotation*)spriteEntrySub;
 
 struct TouchHelper {
 	bool held, down, up;
@@ -124,7 +127,7 @@ public:
 			stack[i].clear();
 		printf("game #%ld\n", time(NULL)&0x7fff);
 
-		win_srand(seed);
+		win_srand(seed&0x7fff);
 		int wLeft = 52;
 		for (int i = 0; i < 52; i++)
 		{
@@ -138,6 +141,63 @@ public:
 
 		for (int i = 0; i < 4; i++)
 			finish[i].clear();
+
+		DrawGameNumber(seed);
+	}
+
+	void DrawGameNumber(long seed)
+	{
+		int number = seed & 0x7fff;
+		int d1 = number / 10000;
+		number -= d1*10000;
+		int d2 = number / 1000;
+		number -= d2*1000;
+		int d3 = number / 100;
+		number -= d3*100;
+		int d4 = number / 10;
+		number -= d4*10;
+		int d5 = number;
+
+		for (int i = 0; i < 10; i++)
+		{
+			spriteEntrySub[i].attribute[0] = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE;
+			spriteEntrySub[i].attribute[1] = ATTR1_SIZE_16;
+			spriteEntrySub[i].attribute[2] = ATTR2_PRIORITY(3);
+		}
+
+		spriteEntrySub[0].attribute[2] = ATTR2_PRIORITY(3) | 0;
+		spriteEntrySub[0].x = 170;
+		spriteEntrySub[0].y = 120;
+		spriteEntrySub[1].attribute[2] = ATTR2_PRIORITY(3) | 2;
+		spriteEntrySub[1].x = 186;
+		spriteEntrySub[1].y = 120;
+		spriteEntrySub[2].attribute[2] = ATTR2_PRIORITY(3) | 4;
+		spriteEntrySub[2].x = 202;
+		spriteEntrySub[2].y = 120;
+		spriteEntrySub[3].attribute[2] = ATTR2_PRIORITY(3) | 6;
+		spriteEntrySub[3].x = 218;
+		spriteEntrySub[3].y = 120;
+		spriteEntrySub[4].attribute[2] = ATTR2_PRIORITY(3) | 8;
+		spriteEntrySub[4].x = 234;
+		spriteEntrySub[4].y = 120;
+
+
+		spriteEntrySub[5].attribute[2] = ATTR2_PRIORITY(3) | (d1*2+10);
+		spriteEntrySub[5].x = 170;
+		spriteEntrySub[5].y = 145;
+		spriteEntrySub[6].attribute[2] = ATTR2_PRIORITY(3) | (d2*2+10);
+		spriteEntrySub[6].x = 186;
+		spriteEntrySub[6].y = 145;
+		spriteEntrySub[7].attribute[2] = ATTR2_PRIORITY(3) | (d3*2+10);
+		spriteEntrySub[7].x = 202;
+		spriteEntrySub[7].y = 145;
+		spriteEntrySub[8].attribute[2] = ATTR2_PRIORITY(3) | (d4*2+10);
+		spriteEntrySub[8].x = 218;
+		spriteEntrySub[8].y = 145;
+		spriteEntrySub[9].attribute[2] = ATTR2_PRIORITY(3) | (d5*2+10);
+		spriteEntrySub[9].x = 234;
+		spriteEntrySub[9].y = 145;
+
 	}
 
 	/// Moves the bottom n cards from the first stack to the second.
@@ -405,6 +465,7 @@ inline void dmaFlushCopy(void *src, void *dst, size_t size)
 void updateOAM() {
     //DC_FlushAll();
 	memcpy(OAM, spriteEntry, 128*sizeof(SpriteEntry));
+	memcpy(OAM_SUB, spriteEntrySub, 128*sizeof(SpriteEntry));
     //dmaCopyHalfWords(3, spriteEntry, OAM, 128 * sizeof(SpriteEntry));
 }
 
@@ -423,7 +484,7 @@ int main(void) {
     vramSetMainBanks(VRAM_A_MAIN_BG_0x06000000,
                      VRAM_B_MAIN_SPRITE_0x06400000,
                      VRAM_C_SUB_BG_0x06200000,
-                     VRAM_D_LCD);
+                     VRAM_D_SUB_SPRITE);
  
 	// Set the graphic modes.
     videoSetMode(MODE_5_2D |
@@ -431,7 +492,7 @@ int main(void) {
                  DISPLAY_SPR_ACTIVE |
                  DISPLAY_SPR_2D);
 #ifndef DEBUG
-    videoSetModeSub(MODE_5_2D | DISPLAY_BG3_ACTIVE);
+    videoSetModeSub(MODE_5_2D | DISPLAY_BG3_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_2D);
 #endif
 
 	// Initialize the background.
@@ -447,18 +508,29 @@ int main(void) {
 		spriteEntry[i].attribute[0] = ATTR0_DISABLED;
 		spriteEntry[i].attribute[1] = 0;
 		spriteEntry[i].attribute[2] = 0;
+
+		spriteEntrySub[i].attribute[0] = ATTR0_DISABLED;
+		spriteEntrySub[i].attribute[1] = 0;
+		spriteEntrySub[i].attribute[2] = 0;
 	}
 	for (i = 0; i < 32; i++) {
 		spriteRotation[i].hdx = 256;
 		spriteRotation[i].hdy = 0;
 		spriteRotation[i].vdx = 0;
 		spriteRotation[i].vdy = 256;
+
+		spriteRotationSub[i].hdx = 256;
+		spriteRotationSub[i].hdy = 0;
+		spriteRotationSub[i].vdx = 0;
+		spriteRotationSub[i].vdy = 256;
 	}
 
 	// Copy the graphics to video ram.
 	DC_FlushAll();
 	dmaCopy(tilesPal, SPRITE_PALETTE, sizeof(tilesPal));
 	dmaCopy(tilesTiles, SPRITE_GFX, sizeof(tilesTiles));
+	dmaCopy(fontPal, SPRITE_PALETTE_SUB, sizeof(tilesPal));
+	dmaCopy(fontTiles, SPRITE_GFX_SUB, sizeof(tilesTiles));
 	decompress(backgroundBitmap, BG_GFX, LZ77Vram);
 #ifndef DEBUG
 	decompress(background2Bitmap, BG_GFX_SUB, LZ77Vram);
@@ -478,7 +550,7 @@ int main(void) {
 		touch.up   = keysUp() & KEY_TOUCH;
 
 		if (keysDown() & KEY_START)
-			game.Deal(time(NULL));
+			game.Deal(win_rand());
 
 		game.Update(touch);
 
